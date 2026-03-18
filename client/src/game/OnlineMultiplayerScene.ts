@@ -35,8 +35,8 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.missionB = new MissionSystem();
 
         // UI Setup - Player A
-        this.hpTextA = this.add.text(20, 20, 'HP: 5', { fontSize: '20px' });
-        this.missionTextA = this.add.text(20, 50, 'Mission: -', { fontSize: '20px' });
+        this.hpTextA = this.add.text(20, 20, 'HP: 5', { fontSize: '24px', color: '#ffffff', backgroundColor: '#00000088' });
+        this.missionTextA = this.add.text(20, 50, 'Mission: -', { fontSize: '18px', color: '#ffffff', backgroundColor: '#00000088' });
         
         // Back Button
         this.add.text(20, 80, '< Back to Menu', { color: '#fff' })
@@ -47,8 +47,8 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
             });
 
         // UI Setup - Player B (Cam B looks at 1000,0)
-        this.hpTextB = this.add.text(1020, 20, 'OPPONENT HP: 5', { fontSize: '20px' });
-        this.missionTextB = this.add.text(1020, 50, 'Mission: -', { fontSize: '20px' });
+        this.hpTextB = this.add.text(1020, 20, 'OPPONENT HP: 5', { fontSize: '24px', color: '#ffffff', backgroundColor: '#00000088' });
+        this.missionTextB = this.add.text(1020, 50, 'Mission: -', { fontSize: '18px', color: '#ffffff', backgroundColor: '#00000088' });
 
         this.turnResultText = this.add.text(this.scale.width / 4, 300, '', { 
             fontSize: '24px', color: '#ffff00', stroke: '#000', strokeThickness: 4 
@@ -71,11 +71,13 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.buttonsA.push(this.createButton(200, 500, 'Defense', () => this.handleAction('A', ActionType.Defense)));
         this.buttonsA.push(this.createButton(300, 500, 'Mission', () => this.handleAction('A', ActionType.Planning)));
         
-        this.add.text(200, 560, 'ONLINE MODE', { fontSize: '18px', color: '#00ffff' }).setOrigin(0.5);
+        const onlineModeText = this.add.text(200, 560, 'ONLINE MODE', { fontSize: '18px', color: '#00ffff' }).setOrigin(0.5);
 
         // Camera Culling
         camA.ignore([this.hpTextB, this.missionTextB]);
-        camB.ignore([this.hpTextA, this.missionTextA, this.turnResultText, ...this.buttonsA]);
+        camB.ignore([this.hpTextA, this.missionTextA, this.turnResultText, onlineModeText, ...this.buttonsA]);
+
+        this.updateUI(); // Initial sync
     }
 
     private createButton(x: number, y: number, label: string, callback: () => void) {

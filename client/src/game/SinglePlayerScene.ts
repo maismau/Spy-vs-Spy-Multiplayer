@@ -32,8 +32,8 @@ export class SinglePlayerScene extends Phaser.Scene {
         this.missionB = new MissionSystem();
 
         // UI Setup - Player A (Camera A looks at 0,0)
-        this.hpTextA = this.add.text(20, 20, 'HP: 5', { fontSize: '20px' });
-        this.missionTextA = this.add.text(20, 50, 'Mission: -', { fontSize: '20px' });
+        this.hpTextA = this.add.text(20, 20, 'HP: 5', { fontSize: '24px', color: '#ffffff', backgroundColor: '#00000088' });
+        this.missionTextA = this.add.text(20, 50, 'Mission: -', { fontSize: '18px', color: '#ffffff', backgroundColor: '#00000088' });
         
         // Back Button
         this.add.text(20, 80, '< Back to Menu', { color: '#fff' })
@@ -41,9 +41,8 @@ export class SinglePlayerScene extends Phaser.Scene {
             .on('pointerdown', () => this.scene.start('MainMenuScene'));
 
         // UI Setup - Player B (Camera B looks at 1000,0)
-        // Note: Coordinates are offset by 1000 to be in Cam B's "world"
-        this.hpTextB = this.add.text(1020, 20, 'PC HP: 5', { fontSize: '20px' });
-        this.missionTextB = this.add.text(1020, 50, 'Mission: -', { fontSize: '20px' });
+        this.hpTextB = this.add.text(1020, 20, 'PC HP: 5', { fontSize: '24px', color: '#ffffff', backgroundColor: '#00000088' });
+        this.missionTextB = this.add.text(1020, 50, 'Mission: -', { fontSize: '18px', color: '#ffffff', backgroundColor: '#00000088' });
 
         // Turn Result Text (Center of both screens? No, let's put it in Cam A view for now)
         this.turnResultText = this.add.text(this.scale.width / 4, 300, '', { 
@@ -62,12 +61,14 @@ export class SinglePlayerScene extends Phaser.Scene {
         // Cam A should only see 0-400, Cam B should only see 1000-1400.
         // In simple mode, objects placed at 1000 won't be seen by Cam A anyway (scrollX=0).
         
-        this.add.text(200, 560, 'Your Turn', { fontSize: '18px', color: '#00ff00' }).setOrigin(0.5);
+        const yourTurnText = this.add.text(200, 560, 'Your Turn', { fontSize: '18px', color: '#00ff00' }).setOrigin(0.5);
 
         // --- CAMERA CULLING ---
         // Setup which camera sees which objects to avoid overlap
         camA.ignore([this.hpTextB, this.missionTextB]);
-        camB.ignore([this.hpTextA, this.missionTextA, this.turnResultText, ...this.buttonsA]);
+        camB.ignore([this.hpTextA, this.missionTextA, this.turnResultText, yourTurnText, ...this.buttonsA]);
+
+        this.updateUI(); // Ensure HP is visible on first render
     }
 
     private createButton(x: number, y: number, label: string, callback: () => void) {
