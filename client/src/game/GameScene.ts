@@ -22,7 +22,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
-        this.socket = io('http://localhost:3000');
+        this.socket = io('https://spy.spy.maldonado.top');
         this.socket.emit('joinRoom', 'game-1');
 
         this.socket.on('opponentAction', (action: ActionType) => {
