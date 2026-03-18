@@ -23,6 +23,7 @@ export class SinglePlayerScene extends Phaser.Scene {
     }
 
     create() {
+        this.splitScreen = new SplitScreen(this);
         const { camA, camB } = this.splitScreen.setup();
 
         this.playerA = { id: 'A', hp: 5, missionProgress: 0, actionSelected: null };
