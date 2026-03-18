@@ -2,6 +2,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
+import path from 'path';
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -9,6 +11,14 @@ const io = new Server(httpServer, {
         origin: "*",
         methods: ["GET", "POST"]
     }
+});
+
+// Serve static frontend files
+app.use(express.static(path.join(__dirname, '../../client/dist')));
+
+// Fallback to React Router / index.html
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
 });
 
 let rooms: Record<string, { players: string[], state: any }> = {};

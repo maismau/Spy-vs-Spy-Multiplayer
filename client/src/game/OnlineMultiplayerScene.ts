@@ -4,7 +4,7 @@ import { SplitScreen } from './SplitScreen';
 import { ActionType, ActionSystem, type PlayerState } from './ActionSystem';
 import { MissionSystem } from './MissionSystem';
 
-export class GameScene extends Phaser.Scene {
+export class OnlineMultiplayerScene extends Phaser.Scene {
     private socket!: Socket;
     private splitScreen!: SplitScreen;
     private playerA!: PlayerState;
@@ -18,10 +18,17 @@ export class GameScene extends Phaser.Scene {
     private missionTextB!: Phaser.GameObjects.Text;
 
     constructor() {
-        super('GameScene');
+        super('OnlineMultiplayerScene');
     }
 
     create() {
+        // Back Button
+        this.add.text(20, 80, '< Back to Menu', { color: '#fff' })
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+                this.socket?.disconnect();
+                this.scene.start('MainMenuScene');
+            });
         this.socket = io('https://spy.spy.maldonado.top');
         this.socket.emit('joinRoom', 'game-1');
 
@@ -109,10 +116,10 @@ export class GameScene extends Phaser.Scene {
     private checkVictory() {
         if (this.playerA.hp <= 0 || this.missionB.isComplete()) {
             alert('Player B Wins!');
-            this.scene.restart();
+            this.scene.start('MainMenuScene');
         } else if (this.playerB.hp <= 0 || this.missionA.isComplete()) {
             alert('Player A Wins!');
-            this.scene.restart();
+            this.scene.start('MainMenuScene');
         }
     }
 

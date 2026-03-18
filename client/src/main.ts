@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
-import { GameScene } from './game/GameScene';
+import { MainMenuScene } from './game/MainMenuScene';
+import { OnlineMultiplayerScene } from './game/OnlineMultiplayerScene';
+import { SinglePlayerScene } from './game/SinglePlayerScene';
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: 800,
     height: 600,
     parent: 'app',
-    scene: [GameScene],
+    scene: [MainMenuScene, SinglePlayerScene, OnlineMultiplayerScene],
     physics: {
         default: 'arcade',
         arcade: {
