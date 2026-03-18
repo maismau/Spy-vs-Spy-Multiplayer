@@ -27,11 +27,11 @@ export class ActionSystem {
             playerA.hp -= 2;
             playerB.hp -= 2;
         } else if (actionA === ActionType.Attack && actionB === ActionType.Defense) {
-            // Blocked
+            playerA.hp -= 1; // Penalty for attacking into a defense
         } else if (actionA === ActionType.Attack) {
             playerB.hp -= 1;
         } else if (actionB === ActionType.Attack && actionA === ActionType.Defense) {
-            // Blocked
+            playerB.hp -= 1; // Penalty for attacking into a defense
         } else if (actionB === ActionType.Attack) {
             playerA.hp -= 1;
         }
