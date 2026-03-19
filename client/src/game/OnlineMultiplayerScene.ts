@@ -26,6 +26,8 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
     }
 
     create() {
+        this.isResolving = false;
+        this.buttonsA = [];
         this.splitScreen = new SplitScreen(this);
         const { camA, camB } = this.splitScreen.setup();
 
@@ -41,10 +43,7 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         // Back Button
         this.add.text(20, 80, '< Back to Menu', { color: '#fff' })
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => {
-                this.socket?.disconnect();
-                this.scene.start('MainMenuScene');
-            });
+            .on('pointerdown', () => this.cleanupAndReturn());
 
         // UI Setup - Player B (Cam B looks at 1000,0)
         this.hpTextB = this.add.text(1020, 20, 'OPPONENT HP: 5', { fontSize: '24px', color: '#ffffff', backgroundColor: '#00000088' });
@@ -152,11 +151,16 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
     private checkVictory() {
         if (this.playerA.hp <= 0 || this.missionB.isComplete()) {
             alert('DEFEAT! Opponent Wins.');
-            this.scene.start('MainMenuScene');
+            this.cleanupAndReturn();
         } else if (this.playerB.hp <= 0 || this.missionA.isComplete()) {
             alert('VICTORY! You Win.');
-            this.scene.start('MainMenuScene');
+            this.cleanupAndReturn();
         }
+    }
+
+    private cleanupAndReturn() {
+        this.socket?.disconnect();
+        this.scene.start('MainMenuScene');
     }
 
     update() {}

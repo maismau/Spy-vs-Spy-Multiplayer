@@ -16,7 +16,12 @@ export class SplitScreen {
         this.scene.cameras.main.setName('PlayerA');
         this.scene.cameras.main.setBackgroundColor('#1a1a1a'); // Dark background
 
-        // Player B viewport (Right)
+        // Player B viewport (Right) - Remove existing if present to avoid accumulation on restart
+        const existingCamB = this.scene.cameras.getCamera('PlayerB');
+        if (existingCamB) {
+            this.scene.cameras.remove(existingCamB);
+        }
+
         const camB = this.scene.cameras.add(this.width / 2, 0, this.width / 2, this.height);
         camB.setName('PlayerB');
         camB.setScroll(1000, 0); // Offset Player B's view in the world

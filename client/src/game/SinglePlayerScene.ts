@@ -23,6 +23,8 @@ export class SinglePlayerScene extends Phaser.Scene {
     }
 
     create() {
+        this.isResolving = false;
+        this.buttonsA = [];
         this.splitScreen = new SplitScreen(this);
         const { camA, camB } = this.splitScreen.setup();
 
