@@ -47,9 +47,8 @@ io.on('connection', (socket) => {
         socket.to(roomId).emit('opponentAction', action);
     });
 
-    socket.on('buyPowerUp', ({ roomId, itemId }) => {
-        // Relay power-up purchase to the opponent
-        socket.to(roomId).emit('opponentBoughtPowerUp', itemId);
+    socket.on('buyPowerUp', ({ roomId, itemId, permanent }) => {
+        socket.to(roomId).emit('opponentBoughtPowerUp', { itemId, permanent });
     });
 
     socket.on('disconnect', () => {

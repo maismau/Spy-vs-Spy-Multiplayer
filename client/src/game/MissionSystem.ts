@@ -1,6 +1,6 @@
 export class MissionSystem {
     public progress: number = 0;
-    public maxProgress: number = 5;
+    public maxProgress: number = 8;
     public stages: string[] = [
         'Blueprint',
         'Assembly',
