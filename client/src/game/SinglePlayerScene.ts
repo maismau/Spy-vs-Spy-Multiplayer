@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SplitScreen } from './SplitScreen';
-import { ActionType, ActionSystem, createPlayer, type PlayerState } from './ActionSystem';
+import { ActionType, ActionSystem, createPlayer, type PlayerState, planFailureChance } from './ActionSystem';
 import { MissionSystem } from './MissionSystem';
 import {
     SHOP_CATALOG,
@@ -245,10 +245,14 @@ export class SinglePlayerScene extends Phaser.Scene {
         const actionA = this.playerA.actionSelected;
         const actionB = this.playerB.actionSelected;
 
-        ActionSystem.resolveTurn(this.playerA, this.playerB, this.missionA, this.missionB);
+        const result = ActionSystem.resolveTurn(this.playerA, this.playerB, this.missionA, this.missionB);
         this.updateUI();
 
-        this.turnResultText.setText(`⚔ ${actionA}  vs  🤖 ${actionB}`).setAlpha(1);
+        let msg = `⚔ ${actionA}  vs  🤖 ${actionB}`;
+        if (result.planAFailed) msg = `❌ PLANO FALHOU!\n${msg}`;
+        if (result.planBFailed) msg += `\n🤖 PLANO FALHOU!`;
+
+        this.turnResultText.setText(msg).setAlpha(1);
         this.time.delayedCall(2000, () => {
             this.turnResultText.setAlpha(0);
             this.isResolving = false;
@@ -271,6 +275,17 @@ export class SinglePlayerScene extends Phaser.Scene {
 
         this.updateStatusBadge();
         this.updateInventoryBadge();
+        this.updateButtonTexts();
+    }
+
+    private updateButtonTexts() {
+        const planBtn = this.buttonsA[2]; // Plan is at index 2
+        if (planBtn) {
+            const chance = planFailureChance(this.playerA.consecutivePlans);
+            const percent = Math.floor(chance * 100);
+            planBtn.setText(`📋 Plan (${percent}%)`);
+            planBtn.setStyle({ color: percent > 0 ? '#ff6666' : '#ffffff' });
+        }
     }
 
     private updateStatusBadge() {

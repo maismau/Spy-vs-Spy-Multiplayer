@@ -17,8 +17,18 @@ export interface PlayerState {
     missionProgress: number;
     missionPoints: number;          // spendable MP currency
     permanentItems: string[];       // IDs of owned permanent power-ups
+    consecutivePlans: number;       // consecutive Planning actions (for failure mechanic)
     actionSelected: ActionType | null;
     activeEffects: PlayerEffects;   // queued for this turn
+}
+
+export function planFailureChance(consecutivePlans: number): number {
+    return Math.min(consecutivePlans * 0.25, 0.75); // cap at 75%
+}
+
+export interface TurnResult {
+    planAFailed: boolean;
+    planBFailed: boolean;
 }
 
 export function createPlayer(id: string): PlayerState {
@@ -29,6 +39,7 @@ export function createPlayer(id: string): PlayerState {
         missionProgress: 0,
         missionPoints: 0,
         permanentItems: [],
+        consecutivePlans: 0,
         actionSelected: null,
         activeEffects: emptyEffects(),
     };
@@ -39,11 +50,19 @@ export class ActionSystem {
         playerA: PlayerState,
         playerB: PlayerState,
         missionA: { progress: number; maxProgress: number },
-        missionB: { progress: number; maxProgress: number }
-    ) {
+        missionB: { progress: number; maxProgress: number },
+        planAFailedOverride?: boolean,
+        planBFailedOverride?: boolean
+    ): TurnResult {
         const actionA = playerA.actionSelected;
         const actionB = playerB.actionSelected;
-        if (!actionA || !actionB) return;
+        if (!actionA || !actionB) return { planAFailed: false, planBFailed: false };
+
+        // ── 0. Roll for Plan failure (or use override for sync) ──────
+        const planAFailed = planAFailedOverride ?? (actionA === ActionType.Planning &&
+            Math.random() < planFailureChance(playerA.consecutivePlans));
+        const planBFailed = planBFailedOverride ?? (actionB === ActionType.Planning &&
+            Math.random() < planFailureChance(playerB.consecutivePlans));
 
         // ── 1. Inject permanent item effects based on chosen action ──
         injectPermanentEffects(
@@ -125,16 +144,22 @@ export class ActionSystem {
         playerA.hp -= dmgToA;
         playerB.hp -= dmgToB;
 
-        // ── 8. Mission Progress (Planning grants 1 MP + 1 progress) ──
-        if (actionA === ActionType.Planning) {
+        // ── 8. Mission Progress (Planning grants 1 MP + 1 progress if not failed) ──
+        if (actionA === ActionType.Planning && !planAFailed) {
             playerA.missionProgress += 1;
             playerA.missionPoints += 1;
             missionA.progress += 1;
+            playerA.consecutivePlans += 1;
+        } else {
+            playerA.consecutivePlans = 0; // reset on non-plan or failed plan
         }
-        if (actionB === ActionType.Planning) {
+        if (actionB === ActionType.Planning && !planBFailed) {
             playerB.missionProgress += 1;
             playerB.missionPoints += 1;
             missionB.progress += 1;
+            playerB.consecutivePlans += 1;
+        } else {
+            playerB.consecutivePlans = 0;
         }
 
         // ── 9. Consume single-use effects; keep permanent slots ──────
@@ -142,5 +167,7 @@ export class ActionSystem {
         playerB.actionSelected = null;
         playerA.activeEffects = emptyEffects();
         playerB.activeEffects = emptyEffects();
+
+        return { planAFailed, planBFailed };
     }
 }

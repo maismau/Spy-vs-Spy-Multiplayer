@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { io, Socket } from 'socket.io-client';
 import { SplitScreen } from './SplitScreen';
-import { ActionType, ActionSystem, createPlayer, type PlayerState } from './ActionSystem';
+import { ActionType, ActionSystem, createPlayer, type PlayerState, planFailureChance } from './ActionSystem';
 import { MissionSystem } from './MissionSystem';
 import {
     SHOP_CATALOG,
@@ -30,6 +30,9 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
     private statusTextA!: Phaser.GameObjects.Text;
     private inventoryTextA!: Phaser.GameObjects.Text;
     private shopFeedbackText!: Phaser.GameObjects.Text;
+
+    private planAFailed = false;
+    private planBFailed = false;
 
     private isResolving = false;
     private buttonsA: Phaser.GameObjects.Text[] = [];
@@ -77,8 +80,9 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.socket = io('https://spy.spy.maldonado.top');
         this.socket.emit('joinRoom', 'game-1');
 
-        this.socket.on('opponentAction', (action: ActionType) => {
-            this.playerB.actionSelected = action;
+        this.socket.on('opponentAction', (data: { action: ActionType, planFailed: boolean }) => {
+            this.playerB.actionSelected = data.action;
+            this.planBFailed = data.planFailed;
             if (this.playerA.actionSelected) this.resolveTurn();
         });
 
@@ -229,7 +233,16 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         if (this.isResolving) return;
         if (this.shopOpen) this.toggleShop();
         this.playerA.actionSelected = action;
-        this.socket.emit('submitAction', { roomId: 'game-1', action });
+
+        // Roll for plan failure locally for sync
+        this.planAFailed = action === ActionType.Planning && 
+            Math.random() < planFailureChance(this.playerA.consecutivePlans);
+
+        this.socket.emit('submitAction', { 
+            roomId: 'game-1', 
+            action, 
+            planFailed: this.planAFailed 
+        });
         this.buttonsA.forEach(btn => {
             const active = btn.text.includes(action === ActionType.Attack ? 'Attack' :
                 action === ActionType.Defense ? 'Defense' : 'Plan');
@@ -243,9 +256,17 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.isResolving = true;
         const actionA = this.playerA.actionSelected;
         const actionB = this.playerB.actionSelected;
-        ActionSystem.resolveTurn(this.playerA, this.playerB, this.missionA, this.missionB);
+        const result = ActionSystem.resolveTurn(
+            this.playerA, this.playerB, this.missionA, this.missionB,
+            this.planAFailed, this.planBFailed
+        );
         this.updateUI();
-        this.turnResultText.setText(`⚔ ${actionA}  vs  👤 ${actionB}`).setAlpha(1);
+
+        let msg = `⚔ ${actionA}  vs  👤 ${actionB}`;
+        if (result.planAFailed) msg = `❌ PLANO FALHOU!\n${msg}`;
+        if (result.planBFailed) msg += `\n👤 PLANO FALHOU!`;
+
+        this.turnResultText.setText(msg).setAlpha(1);
         this.time.delayedCall(2000, () => {
             this.turnResultText.setAlpha(0);
             this.isResolving = false;
@@ -268,6 +289,17 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
 
         this.updateStatusBadge();
         this.updateInventoryBadge();
+        this.updateButtonTexts();
+    }
+
+    private updateButtonTexts() {
+        const planBtn = this.buttonsA[2];
+        if (planBtn) {
+            const chance = planFailureChance(this.playerA.consecutivePlans);
+            const percent = Math.floor(chance * 100);
+            planBtn.setText(`📋 Plan (${percent}%)`);
+            planBtn.setStyle({ color: percent > 0 ? '#ff6666' : '#ffffff' });
+        }
     }
 
     private updateStatusBadge() {
