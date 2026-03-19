@@ -47,6 +47,11 @@ io.on('connection', (socket) => {
         socket.to(roomId).emit('opponentAction', action);
     });
 
+    socket.on('buyPowerUp', ({ roomId, itemId }) => {
+        // Relay power-up purchase to the opponent
+        socket.to(roomId).emit('opponentBoughtPowerUp', itemId);
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });
