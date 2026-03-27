@@ -132,7 +132,7 @@ export const SHOP_CATALOG: PowerUpItem[] = [
         cost: 3,
         value: 0,
         displayNames: ['Pomba-Sabotadora', 'Plan Shredder', 'Pombinha do Caos', 'Trituradora de Planos'],
-        description: '✨ Único: destrói TODOS os pontos de missão do inimigo',
+        description: '✨ Único: Zera TODO o progresso de missão e MP do inimigo (Compra única)',
     },
     {
         id: 'SABOTAGE_2',

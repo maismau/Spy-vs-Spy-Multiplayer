@@ -25,6 +25,7 @@ export interface PlayerState {
     lastHeal1Turn: number;          // turn number of last HEAL_1 use (-99 = never)
     currentTurn: number;            // monotonically increasing turn counter
     consecutiveMissions: number;    // how many consecutive Plans used (for mission overlay stack)
+    itemsBought: string[];          // unique IDs already bought (e.g. WEAPON_3)
 }
 
 export function planFailureChance(consecutivePlans: number): number {
@@ -50,6 +51,7 @@ export function createPlayer(id: string): PlayerState {
         consecutivePlans: 0,
         actionSelected: null,
         activeEffects: emptyEffects(),
+        itemsBought: [],
         shieldActiveTurns: 0,
         lastHeal1Turn: -99,
         currentTurn: 0,

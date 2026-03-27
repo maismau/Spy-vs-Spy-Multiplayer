@@ -110,6 +110,7 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.socket.on('opponentBoughtPowerUp', ({ itemId, permanent }: { itemId: string; permanent: boolean }) => {
             const item = SHOP_CATALOG.find(i => i.id === itemId);
             if (!item) return;
+            if (itemId === 'WEAPON_3') this.playerB.itemsBought.push('WEAPON_3');
             if (permanent) {
                 if (!this.playerB.permanentItems.includes(itemId)) this.playerB.permanentItems.push(itemId);
             } else {
@@ -220,11 +221,16 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         let i = 0;
         for (const item of SHOP_CATALOG) {
             const btn = this.shopPanel[i++];
-            const owned = item.duration === 'PERMANENT' && this.playerA.permanentItems.includes(item.id);
+            const isPerm = item.duration === 'PERMANENT';
+            const alreadyOwnedPerm = isPerm && this.playerA.permanentItems.includes(item.id);
+            const alreadyBoughtUnique = item.id === 'WEAPON_3' && this.playerA.itemsBought.includes('WEAPON_3');
+            
             const canAfford = this.playerA.missionPoints >= item.cost;
             const isHeal1OnCooldown = item.id === 'HEAL_1' && !canUseHeal1(this.playerA.lastHeal1Turn, this.playerA.currentTurn);
-            const disabled = !canAfford || owned || isHeal1OnCooldown;
+            
+            const disabled = !canAfford || alreadyOwnedPerm || alreadyBoughtUnique || isHeal1OnCooldown;
             btn.setStyle({ color: disabled ? '#666' : '#fff' });
+            btn.setInteractive(!disabled ? { useHandCursor: true } : {});
         }
     }
 
@@ -235,12 +241,21 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
             return;
         }
         if (this.playerA.missionPoints < item.cost) { this.showFeedback('❌ MP insuficiente', '#ff4444'); return; }
-        const owned = item.duration === 'PERMANENT' && this.playerA.permanentItems.includes(item.id);
-        if (owned) { this.showFeedback('⚠ Já possui este item', '#ffaa00'); return; }
+        
+        const isPerm = item.duration === 'PERMANENT';
+        const alreadyOwnedPerm = isPerm && this.playerA.permanentItems.includes(item.id);
+        const alreadyBoughtUnique = item.id === 'WEAPON_3' && this.playerA.itemsBought.includes('WEAPON_3');
+
+        if (alreadyOwnedPerm || alreadyBoughtUnique) {
+            this.showFeedback('⚠ Já obteve este item', '#ffaa00');
+            return;
+        }
 
         this.playerA.missionPoints -= item.cost;
+        if (item.id === 'WEAPON_3') this.playerA.itemsBought.push('WEAPON_3');
+        this.socket.emit('buyPowerUp', { itemId: item.id, permanent: isPerm });
 
-        if (item.duration === 'PERMANENT') {
+        if (isPerm) {
             this.playerA.permanentItems.push(item.id);
         } else {
             applyPowerUp(this.playerA.activeEffects, item);

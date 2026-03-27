@@ -143,17 +143,17 @@ export class LayeredVisualEngine {
         }
 
         // ── 3. powerup icon sprites ──────────────────────────────────
-        let px = this.worldX + 10;
-        let py = this.panelH - 50;
+        let px = this.worldX + 15;
+        let py = this.panelH - 80; // Raised to avoid bottom edge/text overlap
         for (const shopId of SHOP_ITEM_IDS) {
             const imgKey = POWERUP_IMAGE_MAP[shopId];
             if (!imgKey) continue;
-            const img = this.safeImage(px, py, imgKey, 20);
-            img.setDisplaySize(44, 44);
+            const img = this.safeImage(px, py, imgKey, 50); // Increased depth to 50
+            img.setDisplaySize(48, 48);
             img.setVisible(false);
             this.powerupSprites.set(shopId, img);
-            px += 50;
-            if (px > this.worldX + this.panelW - 55) { px = this.worldX + 10; py -= 50; }
+            px += 55;
+            if (px > this.worldX + this.panelW - 60) { px = this.worldX + 15; py -= 55; }
         }
 
         // ── 4. mission overlay sprites ───────────────────────────────
