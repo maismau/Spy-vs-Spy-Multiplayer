@@ -1,5 +1,5 @@
 // ============================================================
-// PowerUpSystem.ts — Spy vs Spy Power-Up Shop (v2)
+// PowerUpSystem.ts — Spy vs Spy Power-Up Shop (v3)
 // ============================================================
 
 /** How long a power-up lasts */
@@ -29,6 +29,7 @@ export interface PlayerEffects {
     weaponBoost: boolean;       // single-use queued
     sabotagePlan: boolean;      // single-use queued (destroy all)
     sabotagePlanII: boolean;    // single-use queued (−2 win progress)
+    shieldCarryover: boolean;   // shield persists from previous turn (set by ActionSystem)
 }
 
 export function emptyEffects(): PlayerEffects {
@@ -40,6 +41,7 @@ export function emptyEffects(): PlayerEffects {
         weaponBoost: false,
         sabotagePlan: false,
         sabotagePlanII: false,
+        shieldCarryover: false,
     };
 }
 
@@ -64,7 +66,7 @@ export const SHOP_CATALOG: PowerUpItem[] = [
         cost: 1,
         value: 2,
         displayNames: ['Limpeza de Feridas', 'Boo-Boo Kit', 'Curativo Top Secret', 'Esparadrapo de Campo'],
-        description: 'Restaura 2 HP (uso único)',
+        description: 'Restaura 2 HP (uso único, cooldown 1 turno)',
     },
     {
         id: 'HEAL_2',
@@ -154,7 +156,7 @@ export function applyPowerUp(
     effects: PlayerEffects,
     item: PowerUpItem
 ): void {
-    if (item.duration !== 'SINGLE_USE') return; // permanents go into inventory
+    if (item.duration !== 'SINGLE_USE') return;
     switch (item.effectType) {
         case EffectType.HEAL:
             effects.heal += item.value;
@@ -184,11 +186,16 @@ export function injectPermanentEffects(
                 if (chosenAction === 'DEFENSE') player.activeEffects.shieldRetaliate = true;
                 break;
             case EffectType.SHIELD_REDUCE:
-                player.activeEffects.shieldReduce = true; // always
+                player.activeEffects.shieldReduce = true;
                 break;
             case EffectType.WEAPON_RECOIL:
                 if (chosenAction === 'ATTACK') player.activeEffects.weaponRecoil = true;
                 break;
         }
     }
+}
+
+/** Returns true if the player can buy HEAL_1 this turn (not used last turn) */
+export function canUseHeal1(lastHeal1Turn: number, currentTurn: number): boolean {
+    return currentTurn - lastHeal1Turn > 1;
 }

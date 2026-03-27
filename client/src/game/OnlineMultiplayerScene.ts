@@ -7,10 +7,13 @@ import {
     SHOP_CATALOG,
     applyPowerUp,
     randomDisplayName,
+    canUseHeal1,
     type PowerUpItem,
 } from './PowerUpSystem';
+import { LayeredVisualEngine, preloadLayerAssets } from './visual/LayeredVisualEngine';
 
 const ITEMS_PER_ROW = 2;
+const SHOP_UNLOCK_LEVEL = 2;
 
 export class OnlineMultiplayerScene extends Phaser.Scene {
     private socket!: Socket;
@@ -31,6 +34,9 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
     private inventoryTextA!: Phaser.GameObjects.Text;
     private shopFeedbackText!: Phaser.GameObjects.Text;
 
+    private visualA!: LayeredVisualEngine;
+    private visualB!: LayeredVisualEngine;
+
     private planAFailed = false;
     private planBFailed = false;
 
@@ -44,7 +50,13 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
     private camAObjects: Phaser.GameObjects.GameObject[] = [];
     private camBObjects: Phaser.GameObjects.GameObject[] = [];
 
+    private lastTempPowerupsA: string[] = [];
+
     constructor() { super('OnlineMultiplayerScene'); }
+
+    preload() {
+        preloadLayerAssets(this);
+    }
 
     create() {
         this.isResolving = false;
@@ -53,6 +65,7 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.shopOpen = false;
         this.camAObjects = [];
         this.camBObjects = [];
+        this.lastTempPowerupsA = [];
 
         this.splitScreen = new SplitScreen(this);
         const { camA, camB } = this.splitScreen.setup();
@@ -62,19 +75,27 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.missionA = new MissionSystem();
         this.missionB = new MissionSystem();
 
+        const W = this.scale.width;
+        const H = this.scale.height;
+        const halfW = W / 2;
+        this.visualA = new LayeredVisualEngine(this, 0, halfW, H, this.camAObjects);
+        this.visualB = new LayeredVisualEngine(this, W, halfW, H, this.camBObjects);
+        this.visualA.build();
+        this.visualB.build();
+
         this.buildPlayerAUI();
         this.buildPlayerBUI();
         this.buildTurnResultText();
         this.buildActionButtons();
         this.buildShopPanel();
 
-        this.statusTextA = this.addA(this.add.text(20, 450, '', {
+        this.statusTextA = this.addA(this.add.text(20, 600, '', {
             fontSize: '13px', color: '#aaffaa', backgroundColor: '#00000088', padding: { x: 5, y: 3 }
-        }));
-        this.inventoryTextA = this.addA(this.add.text(20, 472, '', {
+        }).setDepth(200));
+        this.inventoryTextA = this.addA(this.add.text(20, 630, '', {
             fontSize: '13px', color: '#aaeeff', backgroundColor: '#00000088', padding: { x: 5, y: 3 }
-        }));
-        this.addA(this.add.text(200, 565, '🌐 Online Mode', { fontSize: '15px', color: '#00ffff' }).setOrigin(0.5));
+        }).setDepth(200));
+        this.addA(this.add.text(halfW / 2, 690, '🌐 Online Mode', { fontSize: '15px', color: '#00ffff' }).setOrigin(0.5).setDepth(200));
 
         // Socket
         this.socket = io('https://spy.spy.maldonado.top');
@@ -99,34 +120,36 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         camA.ignore(this.camBObjects);
         camB.ignore(this.camAObjects);
         this.updateUI();
+        this.syncVisuals();
     }
 
-    // ── UI Builders ──────────────────────────────────────────────────
+    // ── UI Builders ──────────────────────────────────────────
 
     private buildPlayerAUI() {
-        this.hpTextA = this.addA(this.add.text(20, 20, '', { fontSize: '20px', color: '#fff', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }));
-        this.mpTextA = this.addA(this.add.text(20, 50, '', { fontSize: '16px', color: '#ffe066', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }));
-        this.missionTextA = this.addA(this.add.text(20, 76, '', { fontSize: '14px', color: '#bbb', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }));
-        this.addA(this.add.text(20, 106, '← Menu', { color: '#aaa', fontSize: '13px' })
+        this.hpTextA = this.addA(this.add.text(20, 20, '', { fontSize: '20px', color: '#fff', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }).setDepth(200));
+        this.mpTextA = this.addA(this.add.text(20, 50, '', { fontSize: '16px', color: '#ffe066', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }).setDepth(200));
+        this.missionTextA = this.addA(this.add.text(20, 76, '', { fontSize: '14px', color: '#bbb', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }).setDepth(200));
+        this.addA(this.add.text(20, 106, '← Menu', { color: '#aaa', fontSize: '13px' }).setDepth(200)
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.cleanupAndReturn()));
     }
 
     private buildPlayerBUI() {
-        this.hpTextB = this.addB(this.add.text(1020, 20, '', { fontSize: '20px', color: '#fff', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }));
-        this.mpTextB = this.addB(this.add.text(1020, 50, '', { fontSize: '16px', color: '#ffe066', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }));
-        this.missionTextB = this.addB(this.add.text(1020, 76, '', { fontSize: '14px', color: '#bbb', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }));
-        this.addB(this.add.text(1020, 106, '👤 Oponente', { fontSize: '13px', color: '#aaa' }));
+        const baseX = this.scale.width + 20;
+        this.hpTextB = this.addB(this.add.text(baseX, 20, '', { fontSize: '20px', color: '#fff', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }).setDepth(200));
+        this.mpTextB = this.addB(this.add.text(baseX, 50, '', { fontSize: '16px', color: '#ffe066', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }).setDepth(200));
+        this.missionTextB = this.addB(this.add.text(baseX, 76, '', { fontSize: '14px', color: '#bbb', backgroundColor: '#00000088', padding: { x: 5, y: 3 } }).setDepth(200));
+        this.addB(this.add.text(baseX, 106, '👤 Oponente', { fontSize: '13px', color: '#aaa' }).setDepth(200));
     }
 
     private buildTurnResultText() {
         this.turnResultText = this.addA(this.add.text(200, 290, '', {
             fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 4,
             backgroundColor: '#00000099', padding: { x: 10, y: 6 }
-        }).setOrigin(0.5).setAlpha(0));
+        }).setOrigin(0.5).setAlpha(0).setDepth(300));
         this.shopFeedbackText = this.addA(this.add.text(200, 325, '', {
             fontSize: '13px', color: '#aaffaa', backgroundColor: '#00000066', padding: { x: 6, y: 3 }
-        }).setOrigin(0.5).setAlpha(0));
+        }).setOrigin(0.5).setAlpha(0).setDepth(300));
     }
 
     private buildActionButtons() {
@@ -139,6 +162,7 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         for (const [x, label, act] of defs) {
             const btn = this.add.text(x, 505, label, style)
                 .setInteractive({ useHandCursor: true })
+                .setDepth(200)
                 .on('pointerdown', () => this.handleAction(act))
                 .on('pointerover', () => { if (!this.isResolving) btn.setStyle({ backgroundColor: '#555' }); })
                 .on('pointerout', () => { if (!this.isResolving) btn.setStyle({ backgroundColor: '#333' }); });
@@ -150,7 +174,7 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
     private buildShopPanel() {
         this.shopToggleBtn = this.addA(this.add.text(295, 445, '🛒 Shop', {
             backgroundColor: '#225522', padding: { x: 8, y: 4 }, fontSize: '14px', color: '#aaffaa'
-        }).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.toggleShop()));
+        }).setInteractive({ useHandCursor: true }).setDepth(200).on('pointerdown', () => this.toggleShop()));
 
         let col = 0, row = 0;
         for (const item of SHOP_CATALOG) {
@@ -163,6 +187,7 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
                 padding: { x: 7, y: 4 }, wordWrap: { width: 175 }
             })
             .setInteractive({ useHandCursor: true })
+            .setDepth(250)
             .on('pointerdown', () => this.buyPowerUp(item))
             .on('pointerover', () => btn.setStyle({ backgroundColor: '#555577' }))
             .on('pointerout', () => btn.setStyle({ backgroundColor: '#333344' }))
@@ -181,6 +206,10 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
 
     private toggleShop() {
         if (this.isResolving) return;
+        if (!this.shopOpen && this.missionA.getServerLevel() < SHOP_UNLOCK_LEVEL) {
+            this.showFeedback('🔒 Loja disponível no nível 2', '#ffaa44');
+            return;
+        }
         this.shopOpen = !this.shopOpen;
         this.shopPanel.forEach(b => b.setVisible(this.shopOpen));
         this.shopToggleBtn.setText(this.shopOpen ? '❌ Fechar' : '🛒 Shop');
@@ -193,12 +222,18 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
             const btn = this.shopPanel[i++];
             const owned = item.duration === 'PERMANENT' && this.playerA.permanentItems.includes(item.id);
             const canAfford = this.playerA.missionPoints >= item.cost;
-            btn.setStyle({ color: (!canAfford || owned) ? '#666' : '#fff' });
+            const isHeal1OnCooldown = item.id === 'HEAL_1' && !canUseHeal1(this.playerA.lastHeal1Turn, this.playerA.currentTurn);
+            const disabled = !canAfford || owned || isHeal1OnCooldown;
+            btn.setStyle({ color: disabled ? '#666' : '#fff' });
         }
     }
 
     private buyPowerUp(item: PowerUpItem) {
         if (this.isResolving) return;
+        if (item.id === 'HEAL_1' && !canUseHeal1(this.playerA.lastHeal1Turn, this.playerA.currentTurn)) {
+            this.showFeedback('⏳ Heal 1 em cooldown!', '#ffaa00');
+            return;
+        }
         if (this.playerA.missionPoints < item.cost) { this.showFeedback('❌ MP insuficiente', '#ff4444'); return; }
         const owned = item.duration === 'PERMANENT' && this.playerA.permanentItems.includes(item.id);
         if (owned) { this.showFeedback('⚠ Já possui este item', '#ffaa00'); return; }
@@ -209,6 +244,12 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
             this.playerA.permanentItems.push(item.id);
         } else {
             applyPowerUp(this.playerA.activeEffects, item);
+            if (!this.lastTempPowerupsA.includes(item.id)) {
+                this.lastTempPowerupsA.push(item.id);
+            }
+            if (item.id === 'HEAL_1') {
+                this.playerA.lastHeal1Turn = this.playerA.currentTurn;
+            }
         }
 
         this.socket.emit('buyPowerUp', {
@@ -234,14 +275,13 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         if (this.shopOpen) this.toggleShop();
         this.playerA.actionSelected = action;
 
-        // Roll for plan failure locally for sync
-        this.planAFailed = action === ActionType.Planning && 
+        this.planAFailed = action === ActionType.Planning &&
             Math.random() < planFailureChance(this.playerA.consecutivePlans);
 
-        this.socket.emit('submitAction', { 
-            roomId: 'game-1', 
-            action, 
-            planFailed: this.planAFailed 
+        this.socket.emit('submitAction', {
+            roomId: 'game-1',
+            action,
+            planFailed: this.planAFailed
         });
         this.buttonsA.forEach(btn => {
             const active = btn.text.includes(action === ActionType.Attack ? 'Attack' :
@@ -256,11 +296,20 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         this.isResolving = true;
         const actionA = this.playerA.actionSelected;
         const actionB = this.playerB.actionSelected;
+
+        const tempPowerupsThisTurn = [...this.lastTempPowerupsA];
+        this.lastTempPowerupsA = [];
+
         const result = ActionSystem.resolveTurn(
             this.playerA, this.playerB, this.missionA, this.missionB,
             this.planAFailed, this.planBFailed
         );
         this.updateUI();
+        this.syncVisuals(tempPowerupsThisTurn);
+
+        if (actionA === ActionType.Attack || actionA === ActionType.Defense) {
+            this.visualA.clearMissionOverlays();
+        }
 
         let msg = `⚔ ${actionA}  vs  👤 ${actionB}`;
         if (result.planAFailed) msg = `❌ PLANO FALHOU!\n${msg}`;
@@ -281,15 +330,29 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
     private updateUI() {
         this.hpTextA.setText(`❤ HP: ${this.playerA.hp} / ${this.playerA.maxHp}`);
         this.mpTextA.setText(`💰 MP: ${this.playerA.missionPoints}`);
-        this.missionTextA.setText(`📋 Missão: ${this.missionA.getCurrentStageName()}  ${this.missionA.progress}/${this.missionA.maxProgress}`);
+        this.missionTextA.setText(`📋 ${this.missionA.getCurrentStageName()}  ${this.missionA.progress}/${this.missionA.maxProgress}`);
 
         this.hpTextB.setText(`❤ HP: ${this.playerB.hp} / ${this.playerB.maxHp}`);
         this.mpTextB.setText(`💰 MP: ${this.playerB.missionPoints}`);
-        this.missionTextB.setText(`📋 Missão: ${this.missionB.getCurrentStageName()}  ${this.missionB.progress}/${this.missionB.maxProgress}`);
+        this.missionTextB.setText(`📋 ${this.missionB.getCurrentStageName()}  ${this.missionB.progress}/${this.missionB.maxProgress}`);
 
         this.updateStatusBadge();
         this.updateInventoryBadge();
         this.updateButtonTexts();
+    }
+
+    private syncVisuals(tempPowerupsA: string[] = []) {
+        this.visualA.update(
+            this.playerA,
+            this.missionA.getServerLevel(),
+            this.playerA.consecutiveMissions,
+            tempPowerupsA
+        );
+        this.visualB.update(
+            this.playerB,
+            this.missionB.getServerLevel(),
+            this.playerB.consecutiveMissions
+        );
     }
 
     private updateButtonTexts() {
@@ -309,6 +372,7 @@ export class OnlineMultiplayerScene extends Phaser.Scene {
         if (fx.weaponBoost) parts.push('💥x3');
         if (fx.sabotagePlan) parts.push('🕊💣All');
         if (fx.sabotagePlanII) parts.push('🕊-2');
+        if (this.playerA.shieldActiveTurns > 0) parts.push('🛡↩');
         this.statusTextA.setText(parts.length ? 'Ativos: ' + parts.join(' ') : '');
     }
 

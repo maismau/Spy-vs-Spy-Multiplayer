@@ -42,9 +42,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('submitAction', ({ roomId, action }) => {
+    socket.on('submitAction', ({ roomId, action, planFailed }) => {
         // Simple turn sync logic placeholder
-        socket.to(roomId).emit('opponentAction', action);
+        socket.to(roomId).emit('opponentAction', { action, planFailed });
     });
 
     socket.on('buyPowerUp', ({ roomId, itemId, permanent }) => {

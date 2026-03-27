@@ -1,0 +1,45 @@
+{
+  "description": "Assets required by LayeredVisualEngine. Place files in client/public/assets/ in the indicated subfolders.",
+  "assets": {
+    "backgrounds": [
+      "bg_vida_00.png",
+      "bg_vida_01.png",
+      "bg_vida_02.png",
+      "bg_vida_03.png",
+      "bg_vida_04.png",
+      "bg_vida_05.png",
+      "bg_vida_06.png",
+      "bg_home.png",
+      "server_lv_1.png",
+      "server_lv_2.png",
+      "server_lv_3.png",
+      "server_lv_4.png",
+      "server_lv_5.png",
+      "server_lv_6.png",
+      "server_lv_7.png",
+      "server_lv_8.png"
+    ],
+    "overlays": [
+      "fx_fire_01.png",
+      "point_available.png",
+      "mission_1.png",
+      "mission_2.png",
+      "mission_3.png"
+    ],
+    "objects": [
+      "powerup_HEAL_1.png",
+      "powerup_HEAL_2.png",
+      "powerup_SHIELD_1.png",
+      "powerup_SHIELD_2.png",
+      "powerup_WEAPON_1.png",
+      "powerup_WEAPON_2.png",
+      "powerup_WEAPON_3.png",
+      "powerup_SABOTAGE_2.png"
+    ]
+  },
+  "notes": {
+    "bg_vida_05": "Starting background (HP 5/6 — but used as initial state at HP 6 because images start at 00=game over).",
+    "server_lv_8": "Win screen layer",
+    "missing_texture": "If an asset is missing, Phaser will render a blank image (black or white square). The game will still function."
+  }
+}

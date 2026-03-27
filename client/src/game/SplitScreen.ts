@@ -11,28 +11,31 @@ export class SplitScreen {
     }
 
     setup() {
-        // Player A viewport (Left)
-        this.scene.cameras.main.setSize(this.width / 2, this.height);
-        this.scene.cameras.main.setName('PlayerA');
-        this.scene.cameras.main.setBackgroundColor('#1a1a1a'); // Dark background
+        const halfW = this.width / 2;
 
-        // Player B viewport (Right) - Remove existing if present to avoid accumulation on restart
+        // Player A viewport (Left half of canvas) — views world starting at x=0
+        this.scene.cameras.main.setSize(halfW, this.height);
+        this.scene.cameras.main.setScroll(0, 0);
+        this.scene.cameras.main.setName('PlayerA');
+        this.scene.cameras.main.setBackgroundColor('#1a1a1a');
+
+        // Player B viewport (Right half of canvas) — views world starting at x=width (1280)
         const existingCamB = this.scene.cameras.getCamera('PlayerB');
         if (existingCamB) {
             this.scene.cameras.remove(existingCamB);
         }
 
-        const camB = this.scene.cameras.add(this.width / 2, 0, this.width / 2, this.height);
+        const camB = this.scene.cameras.add(halfW, 0, halfW, this.height);
         camB.setName('PlayerB');
-        camB.setScroll(1000, 0); // Offset Player B's view in the world
+        camB.setScroll(this.width, 0); // Player B world starts at x=1280
         camB.setBackgroundColor('#1a1a1a');
 
-        // Add a divider
+        // Divider line
         const graphics = this.scene.add.graphics();
         graphics.lineStyle(4, 0x000000, 1);
-        graphics.lineBetween(this.width / 2, 0, this.width / 2, this.height);
-        graphics.setScrollFactor(0); // Divider stays in place
-        
+        graphics.lineBetween(halfW, 0, halfW, this.height);
+        graphics.setScrollFactor(0);
+
         return { camA: this.scene.cameras.main, camB };
     }
 }

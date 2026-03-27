@@ -5,8 +5,8 @@ import { SinglePlayerScene } from './game/SinglePlayerScene';
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width: 1280,
+    height: 720,
     parent: 'game-container',
     scale: {
         mode: Phaser.Scale.FIT,
